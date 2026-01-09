@@ -1,0 +1,53 @@
+body {
+    background-color: #000000;
+    color: #00FF00;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+}
+
+#game-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+h1 {
+    color: #00FF00;
+    font-size: 2em;
+}
+
+#mode-selection {
+    margin-bottom: 20px;
+}
+
+button {
+    background-color: #000000;
+    color: #00FF00;
+    border: 2px solid #00FF00;
+    padding: 10px 20px;
+    margin: 0 10px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+}
+
+button:hover {
+    background-color: #00FF00;
+    color: #000000;
+}
+
+#game-canvas {
+    border: 2px solid #00FF00;
+    display: block;
+    margin: 0 auto;
+}
+
+#status {
+    margin-top: 20px;
+    font-size: 1.2em;
+}
+
+#reset {
+    margin-top: 20px;
+}
