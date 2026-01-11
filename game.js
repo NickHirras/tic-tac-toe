@@ -13,7 +13,9 @@ window.addEventListener('resize', () => { setCanvasSize(); render(); });
 const singleBtn = document.getElementById('single-player');
 const twoBtn = document.getElementById('two-player');
 const status = document.getElementById('status');
-const reset = document.getElementById('reset');
+const gameButtons = document.getElementById('game-buttons');
+const playAgainBtn = document.getElementById('play-again');
+const resetBtn = document.getElementById('reset');
 
 const audioContext = new AudioContext();
 
@@ -238,13 +240,13 @@ function aiMove() {
             gameOver = true;
             status.textContent = 'Computer wins!';
             drawWinLine(win);
-            reset.style.display = 'block';
+            gameButtons.style.display = 'block';
             updateGameHistory('loss');
             adjustDifficulty();
         } else if (board.every(cell => cell !== null)) {
             gameOver = true;
             status.textContent = 'Draw!';
-            reset.style.display = 'block';
+            gameButtons.style.display = 'block';
             updateGameHistory('draw');
             adjustDifficulty();
         } else {
@@ -302,13 +304,13 @@ canvas.addEventListener('click', (e) => {
             gameOver = true;
             status.textContent = `${currentPlayer} wins!`;
             drawWinLine(win);
-            reset.style.display = 'block';
+            gameButtons.style.display = 'block';
             updateGameHistory('win');
             adjustDifficulty();
         } else if (board.every(cell => cell !== null)) {
             gameOver = true;
             status.textContent = 'Draw!';
-            reset.style.display = 'block';
+            gameButtons.style.display = 'block';
             updateGameHistory('draw');
             adjustDifficulty();
         } else {
@@ -326,7 +328,6 @@ canvas.addEventListener('click', (e) => {
 
 singleBtn.addEventListener('click', () => {
     gameMode = 'single';
-    difficulty = 1;
     saveToStorage();
     startGame();
 });
@@ -345,12 +346,19 @@ function startGame() {
     render();
     status.textContent = `Player's turn (${getDifficultyText()} difficulty)`;
     document.getElementById('mode-selection').style.display = 'none';
-    reset.style.display = 'none';
+    gameButtons.style.display = 'none';
 }
 
-reset.addEventListener('click', () => {
+playAgainBtn.addEventListener('click', () => {
+    startGame();
+});
+
+resetBtn.addEventListener('click', () => {
     document.getElementById('mode-selection').style.display = 'block';
-    reset.style.display = 'none';
+    gameButtons.style.display = 'none';
     status.textContent = 'Select mode to begin.';
     gameMode = null;
+    difficulty = 1;
+    gameHistory = [];
+    saveToStorage();
 });
