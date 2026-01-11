@@ -25,6 +25,26 @@ let currentPlayer = 'X';
 let gameMode = null;
 let gameOver = false;
 let humanTurn = true;
+let difficulty = 1; // 0=easy, 1=medium, 2=hard
+let gameHistory = []; // Array of last 10 outcomes: 'win', 'loss', 'draw' from human perspective
+
+function loadFromStorage() {
+    const savedDifficulty = localStorage.getItem('ticTacToeDifficulty');
+    const savedHistory = localStorage.getItem('ticTacToeHistory');
+    if (savedDifficulty !== null) {
+        difficulty = parseInt(savedDifficulty, 10);
+    }
+    if (savedHistory !== null) {
+        gameHistory = JSON.parse(savedHistory);
+    }
+}
+
+function saveToStorage() {
+    localStorage.setItem('ticTacToeDifficulty', difficulty.toString());
+    localStorage.setItem('ticTacToeHistory', JSON.stringify(gameHistory));
+}
+
+loadFromStorage(); // Load data on startup
 
 function drawGrid() {
     ctx.strokeStyle = '#00FF00';
@@ -104,13 +124,102 @@ function drawWinLine(win, duration = 1000) {
     animate();
 }
 
+function evaluateBoard(board) {
+    const wins = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+    ];
+    for (let win of wins) {
+        if (board[win[0]] && board[win[0]] === board[win[1]] && board[win[1]] === board[win[2]]) {
+            return board[win[0]] === 'O' ? 10 : -10; // AI wins: +10, Human wins: -10
+        }
+    }
+    return 0; // Draw or ongoing
+}
+
+function minimax(board, depth, isMaximizing, alpha, beta) {
+    const score = evaluateBoard(board);
+    if (score !== 0 || depth === 0 || board.every(cell => cell !== null)) {
+        return score;
+    }
+
+    if (isMaximizing) {
+        let maxEval = -Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (board[i] === null) {
+                board[i] = 'O';
+                const eval = minimax(board, depth - 1, false, alpha, beta);
+                board[i] = null;
+                maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
+                if (beta <= alpha) break;
+            }
+        }
+        return maxEval;
+    } else {
+        let minEval = Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (board[i] === null) {
+                board[i] = 'X';
+                const eval = minimax(board, depth - 1, true, alpha, beta);
+                board[i] = null;
+                minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
+                if (beta <= alpha) break;
+            }
+        }
+        return minEval;
+    }
+}
+
+function getBestMove(board) {
+    let bestScore = -Infinity;
+    let bestMove = -1;
+    for (let i = 0; i < 9; i++) {
+        if (board[i] === null) {
+            board[i] = 'O';
+            const score = minimax(board, 9, false, -Infinity, Infinity);
+            board[i] = null;
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = i;
+            }
+        }
+    }
+    return bestMove;
+}
+
+function getAiMove(board, difficulty) {
+    let available = [];
+    for (let i = 0; i < 9; i++) {
+        if (board[i] === null) available.push(i);
+    }
+    if (available.length === 0) return -1;
+
+    if (difficulty === 0) {
+        // Easy: random move
+        return available[Math.floor(Math.random() * available.length)];
+    } else if (difficulty === 1) {
+        // Medium: 50% chance optimal, 50% random
+        if (Math.random() < 0.5) {
+            return getBestMove(board);
+        } else {
+            return available[Math.floor(Math.random() * available.length)];
+        }
+    } else {
+        // Hard: always optimal
+        return getBestMove(board);
+    }
+}
+
 function aiMove() {
     let available = [];
     for (let i = 0; i < 9; i++) {
         if (board[i] === null) available.push(i);
     }
     if (available.length > 0) {
-        const move = available[Math.floor(Math.random() * available.length)];
+        const move = getAiMove(board, difficulty);
         board[move] = 'O';
         playBeep(550);
         render();
@@ -120,16 +229,49 @@ function aiMove() {
             status.textContent = 'Computer wins!';
             drawWinLine(win);
             reset.style.display = 'block';
+            updateGameHistory('loss');
+            adjustDifficulty();
         } else if (board.every(cell => cell !== null)) {
             gameOver = true;
             status.textContent = 'Draw!';
             reset.style.display = 'block';
+            updateGameHistory('draw');
+            adjustDifficulty();
         } else {
             currentPlayer = 'X';
-            status.textContent = "Player's turn";
+            status.textContent = `Player's turn (${getDifficultyText()} difficulty)`;
             humanTurn = true;
         }
     }
+}
+
+function updateGameHistory(outcome) {
+    gameHistory.push(outcome);
+    if (gameHistory.length > 10) {
+        gameHistory.shift();
+    }
+    saveToStorage();
+}
+
+function calculateWinRate() {
+    if (gameHistory.length === 0) return 0;
+    const wins = gameHistory.filter(o => o === 'win').length;
+    return wins / gameHistory.length;
+}
+
+function adjustDifficulty() {
+    const winRate = calculateWinRate();
+    if (winRate > 0.7 && difficulty < 2) {
+        difficulty++;
+        saveToStorage();
+    } else if (winRate < 0.3 && difficulty > 0) {
+        difficulty--;
+        saveToStorage();
+    }
+}
+
+function getDifficultyText() {
+    return ['Easy', 'Medium', 'Hard'][difficulty];
 }
 
 canvas.addEventListener('click', (e) => {
@@ -150,10 +292,14 @@ canvas.addEventListener('click', (e) => {
             status.textContent = `${currentPlayer} wins!`;
             drawWinLine(win);
             reset.style.display = 'block';
+            updateGameHistory('win');
+            adjustDifficulty();
         } else if (board.every(cell => cell !== null)) {
             gameOver = true;
             status.textContent = 'Draw!';
             reset.style.display = 'block';
+            updateGameHistory('draw');
+            adjustDifficulty();
         } else {
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
             if (gameMode === 'single' && currentPlayer === 'O') {
@@ -161,7 +307,7 @@ canvas.addEventListener('click', (e) => {
                 status.textContent = 'Computer is thinking...';
                 setTimeout(aiMove, 1000);
             } else {
-                status.textContent = `${currentPlayer}'s turn`;
+                status.textContent = `Player's turn (${getDifficultyText()} difficulty)`;
             }
         }
     }
@@ -169,6 +315,8 @@ canvas.addEventListener('click', (e) => {
 
 singleBtn.addEventListener('click', () => {
     gameMode = 'single';
+    difficulty = 1;
+    saveToStorage();
     startGame();
 });
 
@@ -184,7 +332,7 @@ function startGame() {
     humanTurn = true;
     if (audioContext.state === 'suspended') audioContext.resume();
     render();
-    status.textContent = "Player's turn";
+    status.textContent = `Player's turn (${getDifficultyText()} difficulty)`;
     document.getElementById('mode-selection').style.display = 'none';
     reset.style.display = 'none';
 }
