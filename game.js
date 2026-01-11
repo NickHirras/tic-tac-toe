@@ -39,6 +39,7 @@ let gameOver = false;
 let humanTurn = true;
 let difficulty = 1; // 0=easy, 1=medium, 2=hard
 let gameHistory = []; // Array of last 10 outcomes: 'win', 'loss', 'draw' from human perspective
+let winAnimationActive = false;
 
 function loadFromStorage() {
     const savedDifficulty = localStorage.getItem('ticTacToeDifficulty');
@@ -98,6 +99,37 @@ function render() {
     }
 }
 
+function makeMove(index) {
+    if (gameOver || !gameMode || (!humanTurn && gameMode === 'single') || board[index] !== null) return;
+    board[index] = currentPlayer;
+    playBeep();
+    render();
+    const win = checkWin();
+    if (win) {
+        gameOver = true;
+        status.textContent = `${currentPlayer} wins!`;
+        drawWinLine(win);
+        gameButtons.style.display = 'block';
+        updateGameHistory('win');
+        adjustDifficulty();
+    } else if (board.every(cell => cell !== null)) {
+        gameOver = true;
+        status.textContent = 'Draw!';
+        gameButtons.style.display = 'block';
+        updateGameHistory('draw');
+        adjustDifficulty();
+    } else {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        if (gameMode === 'single' && currentPlayer === 'O') {
+            humanTurn = false;
+            status.textContent = 'Computer is thinking...';
+            setTimeout(aiMove, 1000);
+        } else {
+            status.textContent = `Player's turn (${getDifficultyText()} difficulty)`;
+        }
+    }
+}
+
 function checkWin() {
     const wins = [
         [0,1,2], [3,4,5], [6,7,8],
@@ -113,6 +145,7 @@ function checkWin() {
 }
 
 function drawWinLine(win, duration = 1000) {
+    winAnimationActive = true;
     const start = win[0];
     const end = win[2];
     const startX = (start % 3) * scale * 200 + scale * 100;
@@ -131,7 +164,11 @@ function drawWinLine(win, duration = 1000) {
         ctx.moveTo(startX, startY);
         ctx.lineTo(currentX, currentY);
         ctx.stroke();
-        if (progress < 1) requestAnimationFrame(animate);
+        if (progress < 1 && winAnimationActive) {
+            requestAnimationFrame(animate);
+        } else {
+            winAnimationActive = false;
+        }
     };
     animate();
 }
@@ -296,32 +333,20 @@ canvas.addEventListener('click', (e) => {
     const cellY = Math.floor(y / cellSize);
     const index = cellY * 3 + cellX;
     if (board[index] === null) {
-        board[index] = currentPlayer;
-        playBeep();
-        render();
-        const win = checkWin();
-        if (win) {
-            gameOver = true;
-            status.textContent = `${currentPlayer} wins!`;
-            drawWinLine(win);
-            gameButtons.style.display = 'block';
-            updateGameHistory('win');
-            adjustDifficulty();
-        } else if (board.every(cell => cell !== null)) {
-            gameOver = true;
-            status.textContent = 'Draw!';
-            gameButtons.style.display = 'block';
-            updateGameHistory('draw');
-            adjustDifficulty();
-        } else {
-            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            if (gameMode === 'single' && currentPlayer === 'O') {
-                humanTurn = false;
-                status.textContent = 'Computer is thinking...';
-                setTimeout(aiMove, 1000);
-            } else {
-                status.textContent = `Player's turn (${getDifficultyText()} difficulty)`;
-            }
+        makeMove(index);
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key >= '1' && e.key <= '9') {
+        const keyToIndex = {
+            '7': 0, '8': 1, '9': 2,
+            '4': 3, '5': 4, '6': 5,
+            '1': 6, '2': 7, '3': 8
+        };
+        const index = keyToIndex[e.key];
+        if (index !== undefined) {
+            makeMove(index);
         }
     }
 });
@@ -338,6 +363,7 @@ twoBtn.addEventListener('click', () => {
 });
 
 function startGame() {
+    winAnimationActive = false;
     board = Array(9).fill(null);
     currentPlayer = 'X';
     gameOver = false;
