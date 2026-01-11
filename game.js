@@ -1,5 +1,15 @@
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
+let scale;
+
+function setCanvasSize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    scale = canvas.width / 600;
+}
+
+setCanvasSize();
+window.addEventListener('resize', () => { setCanvasSize(); render(); });
 const singleBtn = document.getElementById('single-player');
 const twoBtn = document.getElementById('two-player');
 const status = document.getElementById('status');
@@ -51,36 +61,36 @@ function drawGrid() {
     ctx.lineWidth = 4;
     // Horizontal lines
     ctx.beginPath();
-    ctx.moveTo(0, 200);
-    ctx.lineTo(600, 200);
+    ctx.moveTo(0, scale * 200);
+    ctx.lineTo(canvas.width, scale * 200);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(0, 400);
-    ctx.lineTo(600, 400);
+    ctx.moveTo(0, scale * 400);
+    ctx.lineTo(canvas.width, scale * 400);
     ctx.stroke();
     // Vertical lines
     ctx.beginPath();
-    ctx.moveTo(200, 0);
-    ctx.lineTo(200, 600);
+    ctx.moveTo(scale * 200, 0);
+    ctx.lineTo(scale * 200, canvas.height);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(400, 0);
-    ctx.lineTo(400, 600);
+    ctx.moveTo(scale * 400, 0);
+    ctx.lineTo(scale * 400, canvas.height);
     ctx.stroke();
 }
 
 function render() {
-    ctx.clearRect(0, 0, 600, 600);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawGrid();
     for (let i = 0; i < 9; i++) {
         if (board[i]) {
-            const x = (i % 3) * 200 + 100;
-            const y = Math.floor(i / 3) * 200 + 125;
-            ctx.font = 'bold 100px monospace';
+            const x = (i % 3) * scale * 200 + scale * 100;
+            const y = Math.floor(i / 3) * scale * 200 + scale * 125;
+            ctx.font = `bold ${scale * 100}px monospace`;
             ctx.fillStyle = '#00FF00';
             ctx.shadowColor = '#00FF00';
             ctx.shadowBlur = 5;
-            ctx.fillText(board[i], x - 25, y);
+            ctx.fillText(board[i], x - scale * 25, y);
             ctx.shadowBlur = 0; // reset
         }
     }
@@ -103,10 +113,10 @@ function checkWin() {
 function drawWinLine(win, duration = 1000) {
     const start = win[0];
     const end = win[2];
-    const startX = (start % 3) * 200 + 100;
-    const startY = Math.floor(start / 3) * 200 + 100;
-    const endX = (end % 3) * 200 + 100;
-    const endY = Math.floor(end / 3) * 200 + 100;
+    const startX = (start % 3) * scale * 200 + scale * 100;
+    const startY = Math.floor(start / 3) * scale * 200 + scale * 100;
+    const endX = (end % 3) * scale * 200 + scale * 100;
+    const endY = Math.floor(end / 3) * scale * 200 + scale * 100;
     let progress = 0;
     const animate = () => {
         progress += 16 / duration;
@@ -279,8 +289,9 @@ canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const cellX = Math.floor(x / 200);
-    const cellY = Math.floor(y / 200);
+    const cellSize = scale * 200;
+    const cellX = Math.floor(x / cellSize);
+    const cellY = Math.floor(y / cellSize);
     const index = cellY * 3 + cellX;
     if (board[index] === null) {
         board[index] = currentPlayer;
